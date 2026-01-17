@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Punk Home</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body style="background:black;color:#0ff;font-family:monospace;text-align:center;padding-top:80px;">
+
+  <h1 id="greeting">Loading...</h1>
+  <button id="logout">Log out</button>
+
+<script>
+  const supabaseUrl = 'https://YOUR_PROJECT_ID.supabase.co';
+  const supabaseKey = 'YOUR_PUBLIC_ANON_KEY';
+
+  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+  async function loadUser() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    document.getElementById('greeting').innerText =
+      `Welcome to the Punk Community, ${user.email} 🤘`;
+  }
+
+  document.getElementById('logout').onclick = async () => {
+    await supabaseClient.auth.signOut();
+    window.location.href = 'index.html';
+  };
+
+  loadUser();
+</script>
+</body>
+</html>
