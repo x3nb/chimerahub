@@ -153,153 +153,108 @@
     <div id="synopsis"></div>
   </div>
 </div>
+ <script>
+document.addEventListener('DOMContentLoaded', () => {
 
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Generate floating shapes
-    const shapeCount = 20;
-    const shapesContainer = document.getElementById('shapes');
-    for (let i=0; i<shapeCount; i++) {
-      const shape = document.createElement('div');
-      shape.className = 'shape';
-      shape.style.width = (10 + Math.random()*30) + 'px';
-      shape.style.height = shape.style.width;
-      shape.style.top = Math.random() * 100 + '%';
-      shape.style.left = Math.random() * 100 + '%';
-      shape.style.background = `linear-gradient(45deg, #f0f, #0ff, #ff0)`;
-      shape.style.transform = `rotate(${Math.random()*360}deg)`;
-      shape.style.animationDuration = (10 + Math.random()*20) + 's';
-      shapesContainer.appendChild(shape);
+  /* ---------------- SUPABASE INIT ---------------- */
+
+  const SUPABASE_URL = 'https://mtkujqqzddyxtjeszuzz.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3VqcXF6ZGR5eHRqZXN6dXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MjU4NDMsImV4cCI6MjA4NDIwMTg0M30.bImNbkfZkrfZJhCLlfKTxg8-RQUZWTfZovwN0z3aQjE';
+
+  const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  window.authMode = null;
+  window.currentUser = null;
+
+  /* ---------------- UI CONTROLS ---------------- */
+
+  window.showSignUp = () => {
+    authMode = 'signup';
+    authForm(true);
+  };
+
+  window.showSignIn = () => {
+    authMode = 'signin';
+    authForm(true);
+  };
+
+  window.cancelAuth = () => {
+    authForm(false);
+    authMode = null;
+  };
+
+  function authForm(show) {
+    document.getElementById('auth-form').style.display = show ? 'block' : 'none';
+    document.getElementById('auth-buttons').style.display = show ? 'none' : 'block';
+    document.getElementById('signup-message').innerText = '';
+  }
+
+  /* ---------------- AUTH HANDLER ---------------- */
+
+  window.submitAuth = async () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value.trim();
+
+    if (!email || !password) {
+      alert('Email and password required');
+      return;
     }
 
-    // Initialize Supabase
-    const supabaseUrl = 'https://mtkujqqzddyxtjeszuzz.supabase.co'; // Replace with your URL
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3VqcXF6ZGR5eHRqZXN6dXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MjU4NDMsImV4cCI6MjA4NDIwMTg0M30.bImNbkfZkrfZJhCLlfKTxg8-RQUZWTfZovwN0z3aQjE'; // Replace with your key
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    let result;
 
-    // Auth mode
-    window.authMode = null;
+    if (authMode === 'signup') {
+      result = await supabaseClient.auth.signUp({
+        email,
+        password
+      });
+    }
 
-    // Show Sign Up
-    window.showSignUp = () => {
-      window.authMode = 'signup';
-      document.getElementById('auth-form').style.display = 'block';
-      document.getElementById('auth-buttons').style.display = 'none';
-      document.getElementById('signup-message').innerText = '';
-    };
+    if (authMode === 'signin') {
+      result = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+    }
 
-    // Show Sign In
-    window.showSignIn = () => {
-      window.authMode = 'signin';
-      document.getElementById('auth-form').style.display = 'block';
-      document.getElementById('auth-buttons').style.display = 'none';
-      document.getElementById('signup-message').innerText = '';
-    };
+    const { data, error } = result;
 
-    window.cancelAuth = () => {
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    if (data.user) {
+      currentUser = data.user;
       document.getElementById('auth-form').style.display = 'none';
-      document.getElementById('auth-buttons').style.display = 'block';
-      document.getElementById('signup-message').innerText = '';
-      window.authMode = null;
-    };
+      document.getElementById('main-content').style.display = 'block';
+      showGreeting();
+    }
+  };
 
-    // Sign in / Sign up handler
-    window.submitAuth = async () => {
-      console.log('submitAuth called');
-      const email = document.getElementById('auth-email').value;
-      const password = document.getElementById('auth-password').value;
-      if (!email || !password) {
-        alert('Please enter email and password.');
-        return;
-      }
+  /* ---------------- SESSION RESTORE ---------------- */
 
-      if (window.authMode === 'signup') {
-        // Sign up
-        const { user, error } = await supabase.auth.signUp({ email, password });
-        if (error) {
-          alert('Sign-up error: ' + error.message);
-          return;
-        } else {
-          // Show success message
-          document.getElementById('signup-message').innerText = 'Sign-up successful! Welcome, ' + email + '! Please check your email for confirmation.';
-          // Optionally, hide form after a delay or keep it for login
-          // For now, keep the form visible so they can log in after confirmation
-        }
-      } else if (window.authMode === 'signin') {
-        // Sign in
-        const { user, error } = await supabase.auth.signIn({ email, password });
-        if (error) {
-          alert('Sign-in error: ' + error.message);
-          return;
-        } else {
-          // User signed in successfully
-          window.currentUser = user;
-          document.getElementById('signup-message').innerText = 'Welcome back, ' + email + '!';
-          document.getElementById('auth-form').style.display = 'none';
-          document.getElementById('auth-buttons').style.display = 'none';
-          document.getElementById('main-content').style.display = 'block';
-          showGreeting();
-        }
-      }
-    };
-
-    // Show greeting after login
-    window.showGreeting = () => {
-      const header = document.getElementById('chat-header');
-      const loading = document.getElementById('loading-indicator');
-      header.innerText = `Welcome, ${window.currentUser.email}`;
-      loading.style.display = 'none';
-
-      const chatDiv = document.getElementById('chat');
-      chatDiv.innerHTML = '';
-      setTimeout(() => {
-        chatDiv.innerHTML = `<p>Hello ${window.currentUser.email}! Welcome to your punky community!</p>`;
-        document.getElementById('loading-indicator').style.display = 'none';
-        chatDiv.style.display = 'block';
-      }, 1500);
-    };
-
-    // Setup menu items with synopsis
-    const menuItems = [
-      {
-        title: 'ABOUT',
-        synopsis: 'Learn about the punky community and its roots.',
-        link: 'https://en.wikipedia.org/wiki/Punk_rock'
-      },
-      {
-        title: 'MUSIC',
-        synopsis: 'Discover punk-inspired tunes and playlists.',
-        link: 'https://www.punknews.org/'
-      },
-      {
-        title: 'SHOP',
-        synopsis: 'Get punk fashion and accessories.',
-        link: 'https://punkclothing.com/'
-      },
-      {
-        title: 'BLOG',
-        synopsis: 'Read stories and updates from the community.',
-        link: 'https://punkblog.com/'
-      }
-    ];
-
-    const menuContainer = document.getElementById('menu');
-    const synopsisDiv = document.getElementById('synopsis');
-
-    menuItems.forEach(item => {
-      const div = document.createElement('div');
-      div.className = 'menu-item';
-      div.innerText = item.title;
-      div.onclick = () => {
-        // Show synopsis and link
-        synopsisDiv.innerHTML = `
-          <p>${item.synopsis}</p>
-          <a href="${item.link}" target="_blank" style="color:#f0f;">Visit Link</a>
-        `;
-      };
-      menuContainer.appendChild(div);
-    });
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) {
+      currentUser = session.user;
+      document.getElementById('auth-buttons').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+      showGreeting();
+    }
   });
+
+  /* ---------------- GREETING ---------------- */
+
+  window.showGreeting = () => {
+    chatHeader.innerText = `Welcome, ${currentUser.email}`;
+    loadingIndicator.style.display = 'none';
+    chat.innerHTML = `<p>Hello ${currentUser.email}! Welcome to your punky community 🤘</p>`;
+  };
+
+});
+
 </script>
 </body>
 </html>
