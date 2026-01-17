@@ -1,40 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Punk Home</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body style="background:black;color:#0ff;font-family:monospace;text-align:center;padding-top:80px;">
+<meta charset="UTF-8" />
+<title>My Punky Community</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Vast+Shadow&display=swap" rel="stylesheet" />
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <h1 id="greeting">Loading...</h1>
-  <button id="logout">Log out</button>
-
-<script>
-  
-    // Initialize Supabase
-    const supabaseUrl = 'https://mtkujqqzddyxtjeszuzz.supabase.co'; // Replace with your URL
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3VqcXF6ZGR5eHRqZXN6dXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MjU4NDMsImV4cCI6MjA4NDIwMTg0M30.bImNbkfZkrfZJhCLlfKTxg8-RQUZWTfZovwN0z3aQjE'; // Replace with your key
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-  async function loadUser() {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-
-    if (!user) {
-      window.location.href = 'index.html';
-      return;
-    }
-
-    document.getElementById('greeting').innerText =
-      `Welcome to the Punk Community, ${user.email} 🤘`;
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    font-family: 'Press Start 2P', cursive;
+    color: white;
+    overflow: hidden;
   }
 
-  document.getElementById('logout').onclick = async () => {
-    await supabaseClient.auth.signOut();
-    window.location.href = 'index.html';
-  };
+  .background-shapes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
 
-  loadUser();
+  .shape {
+    position: absolute;
+    border-radius: 50%;
+    animation: float 10s infinite linear;
+  }
+
+  @keyframes float {
+    0% { transform: translateY(0) rotate(0deg); }
+    100% { transform: translateY(-100vh) rotate(360deg); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 20px;
+  }
+
+  #user-avatar {
+    width: 100px;
+    height: 100px;
+    background: #f0f;
+    border-radius: 50%;
+    margin: 20px auto;
+  }
+
+  #auth-buttons button {
+    margin: 10px;
+    padding: 10px 20px;
+    background: #f0f;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-family: 'Press Start 2P', cursive;
+  }
+
+  .paper {
+    background: rgba(0,0,0,0.8);
+    border: 2px solid #f0f;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 400px;
+  }
+
+  .chat-header {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+  }
+
+  .loading {
+    color: #0ff;
+  }
+
+  .greet {
+    margin: 20px 0;
+  }
+
+  .menu {
+    display: flex;
+    justify-content: space-around;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .menu-item {
+    cursor: pointer;
+    padding: 10px;
+    background: #ff0;
+    color: black;
+    border-radius: 5px;
+    margin: 5px;
+    font-family: 'Press Start 2P', cursive;
+  }
+
+  #synopsis {
+    margin-top: 20px;
+    text-align: left;
+  }
+
+  /* The message container style */
+  #signup-message {
+    color: lime;
+    font-weight: bold;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Floating shapes background -->
+<div class="background-shapes" id="shapes"></div>
+
+<!-- Main content -->
+<div class="container">
+  <!-- Avatar -->
+  <div id="user-avatar"></div>
+
+  <!-- Auth Buttons -->
+  <div id="auth-buttons">
+    <button onclick="showSignUp()">Sign Up</button>
+    <button onclick="showSignIn()">Log In</button>
+  </div>
+
+  <!-- Auth Form -->
+  <div class="paper" id="auth-form" style="display:none;">
+    <h2 style="font-family:'Vast Shadow', cursive;">Welcome to the Punk Tribe</h2>
+    <input type="email" id="auth-email" placeholder="Email" style="margin:10px; padding:10px; font-family:'Press Start 2P';" /><br>
+    <input type="password" id="auth-password" placeholder="Password" style="margin:10px; padding:10px; font-family:'Press Start 2P';" /><br>
+    <button onclick="submitAuth()">Submit</button>
+    <button onclick="cancelAuth()">Cancel</button>
+    <!-- Success / info message -->
+    <div id="signup-message"></div>
+  </div>
+
+  <!-- Main Content (hidden initially) -->
+  <div class="paper" id="main-content" style="display:none;">
+    <div class="chat-header" id="chat-header">Loading...</div>
+    <div class="loading" id="loading-indicator">Connecting to the punk chat...</div>
+    <div id="chat" class="greet"></div>
+    <!-- Menu -->
+    <div class="menu" id="menu"></div>
+    <!-- Synopsis display -->
+    <div id="synopsis"></div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Generate floating shapes
+    const shapeCount = 20;
+    const shapesContainer = document.getElementById('shapes');
+    for (let i=0; i<shapeCount; i++) {
+      const shape = document.createElement('div');
+      shape.className = 'shape';
+      shape.style.width = (10 + Math.random()*30) + 'px';
+      shape.style.height = shape.style.width;
+      shape.style.top = Math.random() * 100 + '%';
+      shape.style.left = Math.random() * 100 + '%';
+      shape.style.background = `linear-gradient(45deg, #f0f, #0ff, #ff0)`;
+      shape.style.transform = `rotate(${Math.random()*360}deg)`;
+      shape.style.animationDuration = (10 + Math.random()*20) + 's';
+      shapesContainer.appendChild(shape);
+    }
+
+    // Initialize Supabase
+    const supabaseUrl = 'https://YOUR_SUPABASE_URL'; // <-- Replace with your URL
+    const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'; // <-- Replace with your anon key
+    window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Auth mode
+    window.authMode = null;
+
+    // Show Sign Up
+    window.showSignUp = () => {
+      window.authMode = 'signup';
+      document.getElementById('auth-form').style.display = 'block';
+      document.getElementById('auth-buttons').style.display = 'none';
+      document.getElementById('signup-message').innerText = '';
+    };
+
+    // Show Sign In
+    window.showSignIn = () => {
+      window.authMode = 'signin';
+      document.getElementById('auth-form').style.display = 'block';
+      document.getElementById('auth-buttons').style.display = 'none';
+      document.getElementById('signup-message').innerText = '';
+    };
+
+    window.cancelAuth = () => {
+      document.getElementById('auth-form').style.display = 'none';
+      document.getElementById('auth-buttons').style.display = 'block';
+      document.getElementById('signup-message').innerText = '';
+      window.authMode = null;
+    };
+
+    // Sign in / Sign up handler
+    window.submitAuth = async () => {
+      console.log('submitAuth called');
+      const email = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
+      if (!email || !password) {
+        alert('Please enter email and password.');
+        return;
+      }
+
+      if (window.authMode === 'signup') {
+        // Sign up
+        const { user, error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+          alert('Sign-up error: ' + error.message);
+          return;
+        } else {
+          // Show success message
+          document.getElementById('signup-message').innerText = 'Sign-up successful! Welcome, ' + email + '! Please check your email for confirmation.';
+          // Optionally, hide form after a delay or keep it for login
+          // For now, keep the form visible so they can log in after confirmation
+        }
+      } else if (window.authMode === 'signin') {
+        // Sign in
+        const { user, error } = await supabase.auth.signIn({ email, password });
+        if (error) {
+          alert('Sign-in error: ' + error.message);
+          return;
+        } else {
+          // User signed in successfully
+          window.currentUser = user;
+          document.getElementById('signup-message').innerText = 'Welcome back, ' + email + '!';
+          document.getElementById('auth-form').style.display = 'none';
+          document.getElementById('auth-buttons').style.display = 'none';
+          document.getElementById('main-content').style.display = 'block';
+          showGreeting();
+        }
+      }
+    };
+
+    // Show greeting after login
+    window.showGreeting = () => {
+      const header = document.getElementById('chat-header');
+      const loading = document.getElementById('loading-indicator');
+      header.innerText = `Welcome, ${window.currentUser.email}`;
+      loading.style.display = 'none';
+
+      const chatDiv = document.getElementById('chat');
+      chatDiv.innerHTML = '';
+      setTimeout(() => {
+        chatDiv.innerHTML = `<p>Hello ${window.currentUser.email}! Welcome to your punky community!</p>`;
+        document.getElementById('loading-indicator').style.display = 'none';
+        chatDiv.style.display = 'block';
+      }, 1500);
+    };
+
+    // Setup menu items with synopsis
+    const menuItems = [
+      {
+        title: 'ABOUT',
+        synopsis: 'Learn about the punky community and its roots.',
+        link: 'https://en.wikipedia.org/wiki/Punk_rock'
+      },
+      {
+        title: 'MUSIC',
+        synopsis: 'Discover punk-inspired tunes and playlists.',
+        link: 'https://www.punknews.org/'
+      },
+      {
+        title: 'SHOP',
+        synopsis: 'Get punk fashion and accessories.',
+        link: 'https://punkclothing.com/'
+      },
+      {
+        title: 'BLOG',
+        synopsis: 'Read stories and updates from the community.',
+        link: 'https://punkblog.com/'
+      }
+    ];
+
+    const menuContainer = document.getElementById('menu');
+    const synopsisDiv = document.getElementById('synopsis');
+
+    menuItems.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'menu-item';
+      div.innerText = item.title;
+      div.onclick = () => {
+        // Show synopsis and link
+        synopsisDiv.innerHTML = `
+          <p>${item.synopsis}</p>
+          <a href="${item.link}" target="_blank" style="color:#f0f;">Visit Link</a>
+        `;
+      };
+      menuContainer.appendChild(div);
+    });
+  });
 </script>
 </body>
 </html>
